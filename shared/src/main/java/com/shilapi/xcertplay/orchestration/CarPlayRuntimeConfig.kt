@@ -23,6 +23,14 @@ enum class WirelessHotspotMode {
     MANUAL,
 }
 
+/** Select only hotspot APIs available on the running OS. */
+fun compatibleHotspotMode(mode: WirelessHotspotMode, sdkInt: Int): WirelessHotspotMode = when {
+    sdkInt < 26 -> WirelessHotspotMode.MANUAL
+    sdkInt < 29 && mode == WirelessHotspotMode.WIFI_P2P ->
+        WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
+    else -> mode
+}
+
 enum class ManualHotspotBand {
     AUTO,
     GHZ_2_4,
@@ -118,7 +126,9 @@ class CarPlayRuntimeConfig(
         require(localMfiPrivateKeyUri?.contains('\u0000') != true) {
             "Local MFi private-key URI must not contain U+0000"
         }
-        if (wirelessHotspotMode == WirelessHotspotMode.MANUAL) {
+        if (transport == CarPlayTransport.WIRELESS &&
+            wirelessHotspotMode == WirelessHotspotMode.MANUAL
+        ) {
             val ssid = manualHotspotSsid
             require(!ssid.isNullOrBlank()) {
                 "manualHotspotSsid is required in manual hotspot mode"

@@ -51,8 +51,8 @@ jobs:
 
           for name in RELEASE_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
             if [[ -z "${!name:-}" ]]; then
-              echo "Missing required GitHub Actions secret for ${name}" >&2
-              exit 1
+              echo "Release signing secrets are absent; using the standard debug key."
+              exit 0
             fi
           done
 
@@ -72,6 +72,8 @@ jobs:
         run: >-
           ./gradlew
           :shared:testDebugUnitTest
+          :common:testDebugUnitTest
+          :shared:lintDebug
           :common:lintDebug
           :mobile:lintDebug
           :automotive:lintDebug
@@ -80,7 +82,7 @@ jobs:
           --stacktrace
 
       - name: Verify signed debug APKs
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        if: env.ANDROID_KEYSTORE_PATH != ''
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}

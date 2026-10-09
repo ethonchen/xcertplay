@@ -19,7 +19,7 @@
 - Dynamic Activity resizing with automatic re-handshaking to the new
   resolution.
 - Vehicle head-unit location reporting.
-- Android 9 (API 28) support.
+- Android 6.0 (API 23) support for the mobile APK; Automotive remains API 28+.
 
 ## Usage
 
@@ -84,8 +84,9 @@ connecting to a local MFi chip for authentication.
 - JDK 17 or newer to launch Gradle. The daemon resolves Java 25 through the
   Gradle toolchain.
 - Android SDK Platform 37.
-- Android 9 (API 28) or newer.
-  On Android 9, Wi-Fi P2P 5 GHz mode is unavailable and LocalOnlyHotspot is used instead.
+- Mobile: Android 6.0 (API 23) or newer. Automotive: Android 9 (API 28) or newer.
+  Android 6/7 use a system-managed hotspot: enable the head-unit hotspot, select `Manual hotspot`, and enter the same SSID/password.
+  Android 8/9 can use LocalOnlyHotspot. Wi-Fi P2P 5 GHz requires Android 10.
 - Android NDK `28.2.13676358`.
 - A physical USB Host/OTG Android device and MFi hardware are required for
   hardware validation.

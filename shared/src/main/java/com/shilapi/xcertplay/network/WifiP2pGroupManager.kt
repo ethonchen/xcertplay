@@ -128,6 +128,9 @@ class WifiP2pGroupManager(
                 startAttempt = null
             }
             return group
+        } catch (failure: SecurityException) {
+            cleanupFailedStart(attempt)
+            throw IOException("Wi-Fi P2P permission is unavailable", failure)
         } catch (failure: Exception) {
             cleanupFailedStart(attempt)
             throw failure
@@ -311,9 +314,13 @@ class WifiP2pGroupManager(
     ): WifiP2pGroup? {
         val result = AtomicReference<WifiP2pGroup?>()
         val latch = CountDownLatch(1)
-        p2pManager.requestGroupInfo(channel) {
-            result.set(it)
-            latch.countDown()
+        try {
+            p2pManager.requestGroupInfo(channel) {
+                result.set(it)
+                latch.countDown()
+            }
+        } catch (failure: SecurityException) {
+            throw IOException("Wi-Fi P2P permission is unavailable", failure)
         }
         if (!await(latch, timeoutNanos)) return null
         ensureStartActive(attempt)

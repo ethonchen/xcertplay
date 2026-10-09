@@ -339,6 +339,12 @@ class Iap2UsbSession internal constructor(
         checkOpen()
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
         if (data.isEmpty()) return@synchronized
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            writeUsbBulkChunks(data.size, LEGACY_USB_CHUNK_BYTES) { offset, length ->
+                connection.bulkTransfer(outEndpoint, data, offset, length, timeoutMillis)
+            }
+            return@synchronized
+        }
         val transferred = connection.bulkTransfer(outEndpoint, data, data.size, timeoutMillis)
         if (transferred != data.size) {
             throw IphoneUsbException.DeviceUnavailable(
@@ -351,6 +357,17 @@ class Iap2UsbSession internal constructor(
     fun read(timeoutMillis: Long): ByteArray? = synchronized(readLock) {
         checkOpen()
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            // Android 6/7 have neither queue(ByteBuffer) nor requestWait(timeout).
+            // A bounded synchronous transfer also respects their 16 KiB USB limit.
+            val buffer = ByteArray(LEGACY_USB_CHUNK_BYTES)
+            val received = connection.bulkTransfer(
+                inEndpoint, buffer, buffer.size,
+                timeoutMillis.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+            )
+            checkOpen()
+            return@synchronized if (received > 0) buffer.copyOf(received) else null
+        }
         val request = UsbRequest()
         var initialized = false
         try {
@@ -414,6 +431,7 @@ class Iap2UsbSession internal constructor(
         if (closed) throw IphoneUsbException.DeviceUnavailable("USBMUX session is closed")
     }
 
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
     private fun drainCancelledRead(request: UsbRequest) {
         if (!request.cancel()) {
             throw failSession("Android could not cancel timed out USBMUX read request")
@@ -437,6 +455,7 @@ class Iap2UsbSession internal constructor(
     }
 
     private companion object {
+        const val LEGACY_USB_CHUNK_BYTES = 16_384
         const val USBMUX_READ_CHUNK_BYTES = 65_536
         const val CANCEL_DRAIN_TIMEOUT_MILLIS = 1_000L
     }

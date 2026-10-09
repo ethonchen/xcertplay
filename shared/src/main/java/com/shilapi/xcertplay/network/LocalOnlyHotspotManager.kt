@@ -2,7 +2,6 @@ package com.shilapi.xcertplay.network
 
 import android.content.Context
 import android.net.ConnectivityManager
-import android.net.MacAddress
 import android.net.wifi.SoftApConfiguration
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
@@ -29,6 +28,7 @@ import java.util.concurrent.TimeUnit
  * the AP interface is usable. The reservation and multicast lock stay owned by this instance
  * until [close].
  */
+@RequiresApi(Build.VERSION_CODES.O)
 class LocalOnlyHotspotManager(context: Context) : WirelessHotspotManager {
     private val connectivityManager =
         context.applicationContext.getSystemService(ConnectivityManager::class.java)
@@ -107,6 +107,9 @@ class LocalOnlyHotspotManager(context: Context) : WirelessHotspotManager {
                 bandLabel = configuration.bandLabel,
                 backend = WirelessHotspotBackend.LOCAL_ONLY_HOTSPOT,
             )
+        } catch (failure: SecurityException) {
+            cleanupFailedStart(attempt, acquiredMulticastLock)
+            throw IOException("Wi-Fi hotspot permission is unavailable", failure)
         } catch (failure: Exception) {
             cleanupFailedStart(attempt, acquiredMulticastLock)
             throw failure
@@ -266,11 +269,10 @@ class LocalOnlyHotspotManager(context: Context) : WirelessHotspotManager {
         val security = mapWifiConfigurationSecurity(configuration)
         val passphrase = validatePassphrase(security, unquote(configuration.preSharedKey))
         val bssid = configuration.BSSID?.let {
-            try {
-                MacAddress.fromString(it)
-            } catch (failure: IllegalArgumentException) {
-                throw IOException("LocalOnlyHotspot reported an invalid BSSID: $it", failure)
+            if (!Regex("(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}").matches(it)) {
+                throw IOException("LocalOnlyHotspot reported an invalid BSSID: $it")
             }
+            it
         }
         val channel = readWifiConfigurationChannel(configuration)
 
@@ -280,7 +282,7 @@ class LocalOnlyHotspotManager(context: Context) : WirelessHotspotManager {
             security = security,
             channel = channel,
             bssid = bssid?.toString(),
-            bssidBytes = bssid?.toByteArray(),
+            bssidBytes = bssid?.split(':')?.map { it.toInt(16).toByte() }?.toByteArray(),
             bandLabel = readWifiConfigurationBandLabel(configuration, channel),
         )
     }

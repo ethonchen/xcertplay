@@ -311,9 +311,11 @@ private class VideoDecoder(
             setByteBuffer("csd-0", ByteBuffer.wrap(csd))
             if (pps != null) setByteBuffer("csd-1", ByteBuffer.wrap(pps))
             // Unspecified VUI fields remain unspecified; do not force full range or BT.709.
-            if (parameters.colorStandard != -1) setInteger(MediaFormat.KEY_COLOR_STANDARD, parameters.colorStandard)
-            if (parameters.colorRange != -1) setInteger(MediaFormat.KEY_COLOR_RANGE, parameters.colorRange)
-            if (parameters.colorTransfer != -1) setInteger(MediaFormat.KEY_COLOR_TRANSFER, parameters.colorTransfer)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                if (parameters.colorStandard != -1) setInteger(MediaFormat.KEY_COLOR_STANDARD, parameters.colorStandard)
+                if (parameters.colorRange != -1) setInteger(MediaFormat.KEY_COLOR_RANGE, parameters.colorRange)
+                if (parameters.colorTransfer != -1) setInteger(MediaFormat.KEY_COLOR_TRANSFER, parameters.colorTransfer)
+            }
             setInteger(MediaFormat.KEY_PRIORITY, 0)
         }
         val next = createDecoder(mime)
@@ -483,6 +485,13 @@ private class VideoDecoder(
     }
 
     private fun logOutputFormat(format: MediaFormat) {
+        val colorInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            "standard=${format.intOrNull(MediaFormat.KEY_COLOR_STANDARD)} " +
+                "range=${format.intOrNull(MediaFormat.KEY_COLOR_RANGE)} " +
+                "transfer=${format.intOrNull(MediaFormat.KEY_COLOR_TRANSFER)}"
+        } else {
+            "color metadata unavailable on API 23"
+        }
         Log.i(
             TAG,
             "video decoder output format " +
@@ -490,9 +499,7 @@ private class VideoDecoder(
                 "${format.intOrNull(MediaFormat.KEY_HEIGHT)} " +
                 "stride=${format.intOrNull(MediaFormat.KEY_STRIDE)} " +
                 "slice=${format.intOrNull(MediaFormat.KEY_SLICE_HEIGHT)} " +
-                "standard=${format.intOrNull(MediaFormat.KEY_COLOR_STANDARD)} " +
-                "range=${format.intOrNull(MediaFormat.KEY_COLOR_RANGE)} " +
-                "transfer=${format.intOrNull(MediaFormat.KEY_COLOR_TRANSFER)}",
+                colorInfo,
         )
     }
 
@@ -749,7 +756,11 @@ private class AudioRenderer(
     private fun usageFor(channel: AudioChannel): Int = when (channel) {
         AudioChannel.MEDIA -> AudioAttributes.USAGE_MEDIA
         AudioChannel.PHONE -> AudioAttributes.USAGE_VOICE_COMMUNICATION
-        AudioChannel.ASSISTANT -> AudioAttributes.USAGE_ASSISTANT
+        AudioChannel.ASSISTANT -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioAttributes.USAGE_ASSISTANT
+        } else {
+            AudioAttributes.USAGE_MEDIA
+        }
         AudioChannel.NAVIGATION -> AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE
     }
 
