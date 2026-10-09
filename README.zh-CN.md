@@ -14,7 +14,7 @@
 - 支持语音、导航、音乐多通道音频输出并 mapping 至 Android 的对应通道。
 - 支持动态 Activity resize ，并自动重新握手至新的分辨率。
 - 支持车机位置回传。
-- 支持 Android 9 (API 28) 。
+- 标准 Android 版本支持 Android 6.0（API 23）及以上；Android Automotive 版本仍要求 API 28。
 
 ## 使用方法
 
@@ -71,8 +71,9 @@ Remote MFi 客户端把远程服务当作一块 MFi 芯片远程调用，抑或�
 
 - 启动 Gradle 需要 JDK 17 或更高版本；daemon 通过 Gradle toolchain 解析 Java 25。
 - Android SDK Platform 37。
-- Android 9（API 28）或更高版本。
-  在 Android 9 上不可用 Wi-Fi P2P 5 GHz 模式，应用会改用 LocalOnlyHotspot。
+- 标准 Android APK：Android 6.0（API 23）或更高；Automotive APK：API 28 或更高。
+  Android 6/7 需在系统设置中手动打开车机热点，在应用内选择 `Manual hotspot` 并填写相同的 SSID/密码。
+  Android 8/9 可使用 LocalOnlyHotspot；Wi-Fi P2P 5 GHz 模式要求 Android 10。
 - Android NDK `28.2.13676358`。
 - 硬件验证需要支持 USB Host/OTG 的 Android 设备以及 MFi 硬件。
 
@@ -105,3 +106,14 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 ## 许可证
 
 本项目采用 [GNU General Public License v3.0](LICENSE) 许可。
+
+## Android 6.0 车机适配
+
+- 32 位 ARM（armeabi-v7a）、64 位 ARM 和 x86_64 原生 I²C 库均按 API 23 编译。
+- 使用 core library desugaring 支持旧系统缺少的 Java 时间、Base64 和集合接口。
+- Android 6/7 隐藏不支持的自动热点模式；旧系统的 Siri 音频使用媒体通道。
+- 无线连接：打开车机热点 → 应用选择无线和 Manual hotspot → 填写 SSID/密码（通常 WPA2、2.4 GHz）→ 保存并重连 → 通过蓝牙配对 iPhone。
+- 原项目的 MFi 硬件、远程服务或匹配的证书/私钥要求仍然适用。安装成功不代表可省略认证。
+- 日志路径：`/sdcard/Android/data/com.shilapi.xcertplay/files/logs/xcertplay.log`。
+
+调试 APK 可以在未配置发布签名密钥时构建；正式发布仍需自己的签名密钥。

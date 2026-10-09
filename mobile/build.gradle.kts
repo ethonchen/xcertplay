@@ -11,10 +11,10 @@ android {
 
     defaultConfig {
         applicationId = "com.shilapi.xcertplay"
-        minSdk = 28
+        minSdk = 23
         targetSdk = 37
-        versionCode = 1303
-        versionName = "1.3.3"
+        versionCode = 1304
+        versionName = "1.3.3-android6.1"
 
     }
 
@@ -46,6 +46,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
@@ -53,6 +54,7 @@ android {
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation(platform(libs.androidx.compose.bom))
     implementation(project(":common"))
     implementation(project(":shared"))

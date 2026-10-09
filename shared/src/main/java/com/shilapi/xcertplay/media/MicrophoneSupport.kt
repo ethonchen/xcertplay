@@ -18,7 +18,8 @@ internal fun openMicrophoneRecorder(requestedBufferBytes: Int): AudioRecord {
         AndroidAudioFormat.ENCODING_PCM_16BIT,
     )
     check(minBuffer > 0) { "microphone unavailable at $MICROPHONE_CAPTURE_RATE_HZ Hz" }
-    val recorder = AudioRecord.Builder()
+    val recorder = try {
+        AudioRecord.Builder()
         .setAudioSource(MediaRecorder.AudioSource.MIC)
         .setAudioFormat(
             AndroidAudioFormat.Builder()
@@ -29,6 +30,9 @@ internal fun openMicrophoneRecorder(requestedBufferBytes: Int): AudioRecord {
         )
         .setBufferSizeInBytes(maxOf(minBuffer * 2, requestedBufferBytes))
         .build()
+    } catch (failure: SecurityException) {
+        throw java.io.IOException("Microphone permission is unavailable", failure)
+    }
     if (recorder.state != AudioRecord.STATE_INITIALIZED) {
         recorder.release()
         error("microphone recorder failed to initialize")

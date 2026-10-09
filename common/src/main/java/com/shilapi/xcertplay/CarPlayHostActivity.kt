@@ -1339,7 +1339,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             content.addView(
-                settingsCategoryHeader("Android 9 compatibility"),
+                settingsCategoryHeader("Older Android compatibility"),
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1347,10 +1347,14 @@ class CarPlayHostActivity : ComponentActivity() {
             )
             content.addView(
                 menuText(
-                    "The following settings are unavailable and hidden on Android 9 " +
-                        "(API 28):\n" +
-                        "• Wi-Fi P2P (5 GHz) — LocalOnlyHotspot is used instead.\n" +
-                        "• HEVC software decoder — hardware decoding is used instead.",
+                    "Wi-Fi P2P (5 GHz) and HEVC software decoding require Android 10.\n" +
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                            "Android 6/7: enable the head unit hotspot in system settings, " +
+                                "then enter its SSID and password under Manual hotspot. " +
+                                "LocalOnlyHotspot requires Android 8."
+                        } else {
+                            "LocalOnlyHotspot and Manual hotspot are available."
+                        },
                     16f,
                     MENU_SECONDARY,
                 ),
@@ -2738,7 +2742,9 @@ class CarPlayHostActivity : ComponentActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 add(WirelessHotspotMode.WIFI_P2P to "Wi-Fi P2P (5 GHz)")
             }
-            add(WirelessHotspotMode.LOCAL_ONLY_HOTSPOT to "LocalOnlyHotspot")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                add(WirelessHotspotMode.LOCAL_ONLY_HOTSPOT to "LocalOnlyHotspot")
+            }
             add(WirelessHotspotMode.MANUAL to "Manual hotspot")
         }
         var selectedId = View.NO_ID
@@ -2927,7 +2933,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun validateManualHotspotSettings(): Boolean {
-        if (wirelessHotspotMode != WirelessHotspotMode.MANUAL) return true
+        if (!wirelessEnabled || wirelessHotspotMode != WirelessHotspotMode.MANUAL) return true
         val error = when {
             manualHotspotSsid.isBlank() -> "Hotspot SSID is required"
             manualHotspotSsid.encodeToByteArray().size > 32 ->
@@ -3458,7 +3464,14 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun startCarPlay(size: DisplaySize) {
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress || controller != null) return
         val controllerGeneration = restartGeneration
-        val config = createRuntimeConfig()
+        val config = try {
+            createRuntimeConfig()
+        } catch (failure: IllegalArgumentException) {
+            val message = "Open Settings to complete configuration: ${failure.message}"
+            appendLog(message)
+            setStatus(message)
+            return
+        }
         val airPlayConfig = createAirPlayConfig(size)
         val locationProvider: Iap2LocationProvider? =
             if (config.locationReportingEnabled) {

@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay
 
 import android.content.Context
+import com.shilapi.xcertplay.orchestration.compatibleHotspotMode
 import android.os.Build
 import com.shilapi.xcertplay.airplay.AirPlayDisplaySettings
 import com.shilapi.xcertplay.airplay.AirPlayPhysicalSizeBasis
@@ -234,13 +235,7 @@ object AirPlayPersistence {
             .getString(KEY_WIRELESS_HOTSPOT_MODE, null)
         val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored }
             ?: WirelessHotspotMode.WIFI_P2P
-        return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-            mode == WirelessHotspotMode.WIFI_P2P
-        ) {
-            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
-        } else {
-            mode
-        }
+        return compatibleHotspotMode(mode, Build.VERSION.SDK_INT)
     }
 
     fun saveWirelessHotspotMode(context: Context, mode: WirelessHotspotMode) {
